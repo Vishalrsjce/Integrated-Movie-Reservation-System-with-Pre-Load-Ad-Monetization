@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VR1BOOK | Premium Cinema Experience</title>
+  <!-- QR Code Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
+  <style>
+    :root {
+      --bg: #050505;
+      --card: #141414;
+      --accent: #6feaf6;
+      --vr-red: #e50914;
+      --text: #ffffff;
+      --subtext: #b3b3b3;
+      --success: #46d369;
+    }
+
+    * { box-sizing: border-box; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+
+    body {
+      background: #050505;
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Ad Overlay */
+    #adOverlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.98); z-index: 10000;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    #adImg { max-width: 85%; max-height: 75%; border-radius: 10px; border: 2px solid var(--accent); box-shadow: 0 0 30px rgba(111, 234, 246, 0.3); }
+    .skip-btn {
+      margin-top: 20px; padding: 12px 40px; border-radius: 30px;
+      background: white; color: black; border: none; font-weight: bold; cursor: pointer;
+    }
+    .skip-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Layout */
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .screen { display: none; animation: fadeIn 0.4s ease; }
+    .active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Header */
+    .header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px 0; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+    }
+    .logo { font-size: 32px; font-weight: 900; color: var(--vr-red); text-decoration: none; letter-spacing: 1px; }
+
+    /* Movie Grid */
+    .section-title { font-size: 22px; font-weight: bold; margin: 30px 0 15px 10px; }
+    .netflix-row { display: flex; overflow-x: auto; gap: 15px; padding: 20px 10px; scrollbar-width: none; }
+    .movie-card { position: relative; flex: 0 0 auto; width: 200px; transition: 0.3s; cursor: pointer; }
+    .movie-card:hover { transform: scale(1.05); }
+    .poster-container { width: 100%; aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; background: #222; }
+    .poster-container img { width: 100%; height: 100%; object-fit: cover; }
+    
+    /* Seating */
+    .screen-curve { width: 80%; height: 8px; background: var(--accent); margin: 0 auto 40px; border-radius: 50%; box-shadow: 0 5px 15px var(--accent); }
+    .seating-grid { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .row { display: flex; gap: 8px; }
+    .seat { width: 35px; height: 35px; border-radius: 4px; background: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+    .seat.recliner { border: 1px solid var(--accent); color: var(--accent); }
+    .seat.selected { background: var(--accent) !important; color: black; font-weight: bold; }
+    .seat.occupied { background: #111; color: #444; cursor: not-allowed; }
+
+    /* Footer Navigation */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; width: 100%; background: #111;
+      padding: 15px 25px; display: flex; justify-content: space-between; align-items: center;
+      border-top: 1px solid #333; z-index: 2000;
+    }
+    .btn-main { background: var(--vr-red); color: white; border: none; padding: 12px 25px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+    .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+
+    /* Professional Ticket */
+    #ticketModal {
+      position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9);
+      z-index: 9999; display:none; justify-content:center; align-items:center;
+    }
+    .ticket-card { background: #fff; color: #000; width: 90%; max-width: 400px; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .ticket-top { padding: 20px; text-align: center; border-bottom: 2px dashed #ccc; }
+    .ticket-mid { padding: 20px; display: flex; gap: 15px; }
+    .ticket-mid img { width: 90px; height: 130px; border-radius: 5px; object-fit: cover; }
+    .summary { padding: 20px; background: #f9f9f9; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<!-- Default 5-Second Ad Overlay -->
+<div id="adOverlay">
+  <img id="adImg" src="monitize/promo.jpg" alt="Exclusive Offer">
+  <button id="skipBtn" class="skip-btn" onclick="closeAd()">Skip in 5s</button>
+</div>
+
+<div class="container">
+  
+  <!-- Header -->
+  <div class="header">
+    <a href="#" class="logo" onclick="location.reload()">VR1BOOK</a>
+    <div style="font-size: 12px; color: var(--subtext);">PREMIUM CINEMAS</div>
+  </div>
+
+  <!-- HOME SCREEN -->
+  <div id="homeScreen" class="screen active">
+    <div class="section-title">New Releases</div>
+    <div id="movieGrid" class="netflix-row">
+        <!-- Movies injected here -->
+    </div>
+
+    <div class="section-title">Cinemas Near You</div>
+    <div id="cinemaGrid" style="display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); padding: 10px;">
+        <!-- Cinemas injected here -->
+    </div>
+  </div>
+
+  <!-- DETAILS SCREEN -->
+  <div id="detailsScreen" class="screen">
+    <button class="btn-outline" style="margin-bottom: 20px;" onclick="showScreen('homeScreen')">← Back</button>
+    <div id="movieHero" style="height: 380px; border-radius: 15px; position: relative; overflow: hidden; background-size: cover; background-position: center;">
+        <div style="position: absolute; bottom: 0; width: 100%; padding: 40px; background: linear-gradient(transparent, #050505);">
+            <h1 id="heroTitle" style="margin: 0; font-size: 2.5rem;"></h1>
+            <p id="heroMeta" style="color: var(--accent); font-weight: bold; font-size: 1.1rem;"></p>
+        </div>
+    </div>
+    
+    <div class="section-title">Select Show Time</div>
+    <div id="timeGrid" style="display: flex; gap: 12px; padding-left: 10px; flex-wrap: wrap;"></div>
+  </div>
+
+  <!-- SEATING SCREEN -->
+  <div id="seatingScreen" class="screen">
+    <button class="btn-outline" style="margin-bottom: 20px;" onclick="showScreen('detailsScreen')">← Back</button>
+    <div class="screen-curve"></div>
+    <div style="text-align: center; color: var(--accent); letter-spacing: 10px; margin-bottom: 30px; font-weight: bold;">SCREEN</div>
+    <div id="seatingContainer" class="seating-grid"></div>
+  </div>
+
+</div>
+
+<!-- Booking Footer -->
+<div id="bookingFooter" class="bottom-nav" style="display: none;">
+  <div>
+    <div id="footerText" style="font-weight: bold; color: var(--accent);">Select Seats</div>
+    <div id="footerSub" style="font-size: 14px; color: var(--text);">Total: ₹0</div>
+  </div>
+  <button id="footerBtn" class="btn-main" disabled onclick="finalizeBooking()">Pay & Book</button>
+</div>
+
+<!-- Ticket Modal -->
+<div id="ticketModal">
+    <div class="ticket-card" id="ticketContent"></div>
+</div>
+
+<script>
+// MOVIE DATA (Your specific 10 movies)
+const MOVIES = [
+    { title: "Good Fortune (2025)", img: "New folder/Good Fortune (2025).webp", rating: "6.5", genre: "Comedy" },
+    { title: "M3GAN 2.0 (2025)", img: "New folder/M3GAN 2.0.webp", rating: "6.1", genre: "Horror/Sci-Fi" },
+    { title: "Mercy (2026)", img: "New folder/Mercy.webp", rating: "6.1", genre: "Sci-Fi/Thriller" },
+    { title: "Primate (2025)", img: "New folder/Primate.webp", rating: "5.9", genre: "Horror" },
+    { title: "Send Help (2026)", img: "New folder/Send Help (2026).webp", rating: "7.1", genre: "Thriller" },
+    { title: "The Conjuring: Last Rites (2025)", img: "New folder/The Conjuring Last Rites.webp", rating: "6.2", genre: "Horror" },
+    { title: "The Fantastic Four: First Steps (2025)", img: "New folder/The Fantastic Four First Steps.webp", rating: "7.2", genre: "Action/Sci-Fi" },
+    { title: "The Housemaid (2025)", img: "New folder/The Housemaid.webp", rating: "7.4", genre: "Drama/Mystery" },
+    { title: "The Rip (2026)", img: "New folder/The Rip.webp", rating: "6.8", genre: "Crime/Thriller" },
+    { title: "Zootopia 2 (2025)", img: "New folder/Zootopia 2.webp", rating: "7.5", genre: "Animation" }
+];
+
+const THEATERS = [
+    { name: "PVR: Nexus Mall", loc: "Nexus Mall, Mysuru" },
+    { name: "INOX: Mall of Mysuru", loc: "Mall of Mysuru" },
+    { name: "DRC Cinemas", loc: "BM Habitat Mall" },
+    { name: "Sangam Digital 4K", loc: "Sangam Circle" }
+];
+
+let state = { movie: null, theater: null, time: null, seats: [] };
+
+// Initialization
+window.onload = () => {
+    renderHome();
+    startAdTimer();
+};
+
+function startAdTimer() {
+    const skipBtn = document.getElementById('skipBtn');
+    let timeLeft = 5;
+    const interval = setInterval(() => {
+        timeLeft--;
+        skipBtn.innerText = `Skip in ${timeLeft}s`;
+        if (timeLeft <= 0) {
+            clearInterval(interval);
+            skipBtn.disabled = false;
+            skipBtn.innerText = "Skip Ad";
+        }
+    }, 1000);
+}
+
+function closeAd() { document.getElementById('adOverlay').style.display = 'none'; }
+
+function renderHome() {
+    const grid = document.getElementById('movieGrid');
+    grid.innerHTML = MOVIES.map(m => `
+        <div class="movie-card" onclick="selectMovie('${m.title}')">
+            <div class="poster-container"><img src="${m.img}"></div>
+            <div style="margin-top:10px; font-size:13px; font-weight:bold; text-align:center;">${m.title}</div>
+        </div>
+    `).join('');
+
+    const cGrid = document.getElementById('cinemaGrid');
+    cGrid.innerHTML = THEATERS.map(t => `
+        <div style="background:var(--card); padding:20px; border-radius:10px; cursor:pointer; border:1px solid #333;" onclick="selectCinema(this, '${t.name}')">
+            <div style="color:var(--accent); font-weight:bold; font-size:16px;">${t.name}</div>
+            <div style="font-size:12px; color:var(--subtext); margin-top:5px;">${t.loc}</div>
+        </div>
+    `).join('');
+}
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.getElementById('bookingFooter').style.display = (id === 'seatingScreen') ? 'flex' : 'none';
+}
+
+function selectMovie(title) {
+    state.movie = MOVIES.find(m => m.title === title);
+    document.getElementById('heroTitle').innerText = state.movie.title;
+    document.getElementById('heroMeta').innerText = `⭐ ${state.movie.rating} Rating | ${state.movie.genre}`;
+    document.getElementById('movieHero').style.backgroundImage = `linear-gradient(to top, #050505, transparent), url('${state.movie.img}')`;
+    
+    const times = ["10:30 AM", "1:45 PM", "6:15 PM", "10:00 PM"];
+    document.getElementById('timeGrid').innerHTML = times.map(t => `
+        <button class="btn-outline" style="min-width:100px;" onclick="selectTime(this, '${t}')">${t}</button>
+    `).join('');
+    
+    showScreen('detailsScreen');
+}
+
+function selectCinema(el, name) {
+    state.theater = name;
+    document.querySelectorAll('#cinemaGrid div').forEach(d => d.style.borderColor = '#333');
+    el.style.borderColor = 'var(--accent)';
+}
+
+function selectTime(el, time) {
+    if(!state.theater) { alert("Please select a Cinema first!"); return; }
+    state.time = time;
+    document.querySelectorAll('#timeGrid button').forEach(b => { b.style.background = 'transparent'; b.style.color = 'var(--accent)'; });
+    el.style.background = 'var(--accent)';
+    el.style.color = 'black';
+    startSeating();
+}
+
+function startSeating() {
+    showScreen('seatingScreen');
+    const container = document.getElementById('seatingContainer');
+    container.innerHTML = "";
+    state.seats = [];
+
+    const rows = ['A','B','C','D','E','F','G','H'];
+    rows.forEach((rowName, idx) => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'row';
+        const isRecliner = idx >= 6;
+        for(let i=1; i<=10; i++){
+            const seatId = rowName + i;
+            const seat = document.createElement('div');
+            seat.className = `seat ${isRecliner ? 'recliner' : ''}`;
+            seat.innerText = i;
+            // Randomly occupy some seats
+            if(Math.random() < 0.15) seat.className += ' occupied';
+            else seat.onclick = () => toggleSeat(seat, seatId, isRecliner ? 480 : 250);
+            rowDiv.appendChild(seat);
+        }
+        container.appendChild(rowDiv);
+    });
+}
+
+function toggleSeat(el, id, price) {
+    if(el.classList.contains('selected')) {
+        el.classList.remove('selected');
+        state.seats = state.seats.filter(s => s.id !== id);
+    } else {
+        el.classList.add('selected');
+        state.seats.push({id, price});
+    }
+    const total = state.seats.reduce((sum, s) => sum + s.price, 0);
+    document.getElementById('footerText').innerText = state.seats.length > 0 ? `Seats: ${state.seats.map(s => s.id).join(', ')}` : "Select Seats";
+    document.getElementById('footerSub').innerText = `Total Amount: ₹${total}`;
+    document.getElementById('footerBtn').disabled = state.seats.length === 0;
+}
+
+function finalizeBooking() {
+    const bookingId = 'VR1' + Math.floor(Math.random()*900000 + 100000);
+    const totalTicket = state.seats.reduce((sum, s) => sum + s.price, 0);
+    const fees = Math.floor(totalTicket * 0.12);
+    const finalTotal = totalTicket + fees;
+
+    document.getElementById('ticketContent').innerHTML = `
+        <div class="ticket-top">
+            <div style="color:var(--success); font-weight:bold; font-size:20px;">BOOKING CONFIRMED</div>
+            <div style="font-size:12px; color:#666; margin-top:5px;">Transaction ID: ${bookingId}</div>
+        </div>
+        <div class="ticket-mid">
+            <img src="${state.movie.img}">
+            <div style="flex:1;">
+                <b style="font-size:18px; display:block; margin-bottom:5px;">${state.movie.title}</b>
+                <div style="font-size:13px; color:#444;">${state.time} | Today</div>
+                <div style="font-size:13px; color:#444;">${state.theater}</div>
+                <div style="background:#eee; display:inline-block; padding:4px 10px; border-radius:5px; margin-top:15px; font-weight:bold;">
+                    ${state.seats.map(s => s.id).join(', ')}
+                </div>
+            </div>
+        </div>
+        <div style="display:flex; justify-content:center; padding:15px; background:#fff;" id="qrcode"></div>
+        <div class="summary">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Tickets (${state.seats.length})</span><span>₹${totalTicket}</span></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>Convenience Fee</span><span>₹${fees}</span></div>
+            <div style="border-top:1px dashed #ccc; padding-top:10px; display:flex; justify-content:space-between; font-weight:bold; font-size:16px;">
+                <span>Total Amount</span><span>₹${finalTotal}</span>
+            </div>
+        </div>
+        <button class="btn-main" style="width:100%; padding:15px; border-radius:0;" onclick="location.reload()">Done</button>
+    `;
+    document.getElementById('ticketModal').style.display = 'flex';
+    new QRCode(document.getElementById("qrcode"), { text: bookingId, width: 120, height: 120 });
+}
+</script>
+</body>
+</html>
